@@ -4,9 +4,12 @@ import com.journal.mental_health_journal.dto.JournalEntryRequest;
 import com.journal.mental_health_journal.dto.JournalEntryResponse;
 import com.journal.mental_health_journal.entity.JournalEntry;
 import com.journal.mental_health_journal.repository.JournalEntryRepository;
+import com.journal.mental_health_journal.service.kafka.KafkaProducerService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -16,21 +19,28 @@ public class JournalServiceImpl implements JournalService {
     @Autowired
     private JournalEntryRepository journalEntryRepository;
 
+    @Autowired
+    private KafkaProducerService kafkaProducerService;
+
     @Override
     public JournalEntryResponse createEntry(JournalEntryRequest request) {
         JournalEntry entry = new JournalEntry();
         entry.setUserId(request.getUserId());
         entry.setContent(request.getContent());
+        LocalTime currentTime = LocalTime.now();
+        entry.setCreatedAt(LocalDateTime.parse(currentTime.toString()));
 
         JournalEntry saved = journalEntryRepository.save(entry);
+
+        // TODO: can be made async
+        kafkaProducerService.sendMessage(saved.getId(), saved.getContent());
 
         JournalEntryResponse response = new JournalEntryResponse();
         response.setId(saved.getId());
         response.setUserId(saved.getUserId());
         response.setContent(saved.getContent());
-        response.setCreatedAt(saved.getCreatedAt());
+        response.setCreatedAt(LocalDateTime.parse(currentTime.toString()));
 
-        // AI fields are null (not analyzed yet)
         return response;
     }
 

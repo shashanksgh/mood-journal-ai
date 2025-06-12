@@ -71,6 +71,4 @@ public class JournalAnalysis {
     @OneToOne
     @JoinColumn(name = "journal_entry_id")
     private JournalEntry journalEntry;
-
-    // Getters and Setters
 }
